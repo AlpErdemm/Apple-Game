@@ -26,7 +26,9 @@ public static class MuhammetDataBase
             {
                 patientId = System.Guid.NewGuid().ToString(),
                 patientName = firstName + " " + lastName,
-                isMale = isMale
+                isMale = isMale,
+                rangeOfMotion = Random.Range(30f, 120f),
+                isInGame = Random.Range(0, 2) == 0 // Yeni isme göre güncellendi
             };
 
             patients.Add(newPatient);
@@ -34,5 +36,7 @@ public static class MuhammetDataBase
 
         Debug.Log(randomCount + " random patients created.");
     }
+
+
 
 }
