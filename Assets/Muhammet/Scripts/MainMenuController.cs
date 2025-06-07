@@ -172,7 +172,7 @@ public class MainMenuController : MonoBehaviour
         patientNameSurnameText.text = patient.patientName;
         if (patient.rangeOfMotion == 0)
         {
-            patientRangeOfMotionText.text = "Hareket Mesafesi : NULL !";
+            patientRangeOfMotionText.text = "Hareket Mesafesi : ölçülmedi !";
         }
         else
         {
