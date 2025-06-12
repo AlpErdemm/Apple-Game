@@ -15,25 +15,21 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
 public class HandCurlInteractor : XRDirectInteractor
 {
     [Header("Curl Settings")]
-    [Range(0f, 1f)]
-    public float curlThreshold = 0.5f;
+    [Range(0f, 1f)] public float curlThresholdGrab = 0.5f;
+    [Range(0f, 1f)] public float curlThresholdRelease = 0.4f;
 
     [Tooltip("Thumb counts toward the curled-finger tally?")]
     public bool includeThumb = false;
 
-    [Tooltip("How many fingers must exceed the threshold for a grab")]
-    [Range(1,5)]
-    public int requiredFingers = 4;
+    [Tooltip("How many fingers must exceed the threshold for grab/release")]
+    [Range(1, 5)] public int requiredFingers = 4;
 
-    /* ───────── internal state ───────── */
     XRHandSubsystem _handSubsystem;
-    bool            _isCurlActive;
+    bool _isCurlActive;
 
     protected override void OnEnable()
     {
         base.OnEnable();
-
-        // find a running XRHandSubsystem once
         var subs = new List<XRHandSubsystem>();
         SubsystemManager.GetSubsystems(subs);
         if (subs.Count == 0)
@@ -50,19 +46,14 @@ public class HandCurlInteractor : XRDirectInteractor
     {
         if (_handSubsystem != null)
             _handSubsystem.updatedHands -= OnHandsUpdated;
-
         base.OnDisable();
     }
-/* ---------- interactor plumbing ---------- */
-// XR Interaction Toolkit checks this read-only PROPERTY each frame.
-// Returning true tells XRI “the grab button is down”.
+
     public override bool isSelectActive => _isCurlActive;
 
-    /* ---------- hand-update callback ---------- */
     void OnHandsUpdated(XRHandSubsystem _, XRHandSubsystem.UpdateSuccessFlags __, XRHandSubsystem.UpdateType ___)
     {
-        var hand = handedness == InteractorHandedness.Left ? _handSubsystem.leftHand
-                                                  : _handSubsystem.rightHand;
+        var hand = handedness == InteractorHandedness.Left ? _handSubsystem.leftHand : _handSubsystem.rightHand;
         if (!hand.isTracked)
         {
             _isCurlActive = false;
@@ -77,16 +68,28 @@ public class HandCurlInteractor : XRDirectInteractor
             var shape = XRFingerShapeMath.CalculateFingerShape(
                             hand, finger, XRFingerShapeTypes.FullCurl);
 
-            if (shape.TryGetFullCurl(out float curl) && curl >= curlThreshold)
-                ++curled;
+            if (shape.TryGetFullCurl(out float curl))
+            {
+                if (_isCurlActive)
+                {
+                    if (curl >= curlThresholdRelease) ++curled;
+                }
+                else
+                {
+                    if (curl >= curlThresholdGrab) ++curled;
+                }
+            }
         }
-        _isCurlActive = curled >= requiredFingers;
+
+        if (_isCurlActive)
+            _isCurlActive = curled >= requiredFingers;  // Release only if fewer than required fingers are curled
+        else
+            _isCurlActive = curled >= requiredFingers;  // Grab only if enough fingers are curled
     }
 
-    /* ---------- helpers ---------- */
     static readonly XRHandFingerID[] FingersArray =
     {
         XRHandFingerID.Thumb, XRHandFingerID.Index, XRHandFingerID.Middle,
-        XRHandFingerID.Ring,  XRHandFingerID.Little
+        XRHandFingerID.Ring, XRHandFingerID.Little
     };
 }

@@ -1,381 +1,284 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
 using DG.Tweening;
 using TMPro;
 using Unity.XR.CoreUtils;
-using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
-using UnityEngine.XR.Interaction.Toolkit.Interactors;
+
+
+// NOTE: Serialized fields use PascalCase; private fields use _camelCase.
 
 [Serializable]
 public struct GridPosition
 {
-    public Vector3Int grid;   // logical cell (–3 … +3 on each axis)
-    public Vector3    world;  // world-space position (×100)
+    public Vector3Int Grid;
+    public Vector3 WorldPosition;
 
-    public GridPosition(Vector3Int grid, Vector3 world)
+    public GridPosition(Vector3Int grid, Vector3 worldPosition)
     {
-        this.grid  = grid;
-        this.world = world;
+        Grid = grid;
+        WorldPosition = worldPosition;
     }
 }
 
 public class GridAppleSpawner : MonoBehaviour
 {
-    [Header("Hand Joints")]
-    public List<Transform> leftHandTips = new();
-    public List<Transform> rightHandTips = new();
-    
-    public XRBaseInteractor leftHandInteractor;
-    public XRBaseInteractor rightHandInteractor;
+    [Header("Hand & Interaction")]
+    public List<Transform> LeftHandTips = new();
+    public List<Transform> RightHandTips = new();
+    public UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor LeftHandInteractor;
+    public UnityEngine.XR.Interaction.Toolkit.Interactors.XRBaseInteractor RightHandInteractor;
 
-    /* ─────────── Inspector fields ─────────── */
+    [Header("Prefab & Grid")]
+    public GameObject ApplePrefab;
+    public int Range;               // e.g. –3…+3
+    public float Spacing;          // world units
+    public int StartCountdown = 15;
 
-    [Header("Prefab & Grid Settings")]
-    public GameObject applePrefab;
-    public int   range;
-    public float spacing;
-    public int startCoundown;
     [Header("Materials & Spawn Odds")]
-    public Material healthyMaterial;
-    public Material rottenMaterial;
-    public Material transparentMaterial;
+    public Material HealthyMaterial;
+    public Material RottenMaterial;
+    public Material TransparentMaterial;
     [Range(0f, 1f)]
-    public float rottenChance = 0.3f;       // 30 % rotten by default
-    
-    public XROrigin xrOrigin;
+    public float RottenChance = 0.3f;
 
-    public Vector3 healthyBasketOffset;
-    public Vector3 rottenBasketOffset;
-    public GameObject healthyBasket;
-    public GameObject rottenBasket;
-    public GrabEffect grabEffect;
-    /* ─────────── Runtime data ─────────── */
+    [Header("Baskets")]
+    public XROrigin XrOrigin;
+    public GameObject HealthyBasket;
+    public Vector3 HealthyBasketOffset;
+    public GameObject RottenBasket;
+    public Vector3 RottenBasketOffset;
 
-    public List<GridPosition> positions = new();   // all legal cells
-    public List<GridPosition> calibratedPositions = new();   // all legal cells
+    public GrabEffect GrabEffect;
+    public Text BasketLabel;
+    public float BasketMoveDuration = 0.5f;
 
-    private GameObject  currentApple;
-    private Vector3Int  currentGrid;               // grid of the active apple
-    private float       spawnTimestamp;            // Time.time when it appeared
-    private readonly System.Random rng = new();    // deterministic tests → seed
-    public float basketMoveDuration = 0.5f;
-    /* ─────────── Analytics — **requested** ─────────── */
-
-    public float      lastPickSeconds { get; private set; } = -1f;
-    public Vector3Int lastPickGrid    { get; private set; }
-    
     [Header("Arc Settings")]
     [Range(-180f, 180f)]
-    public float arcRotation = 0f; // Rotation offset in degrees
-    public Text basketText;
+    public float ArcRotation = 0f;
 
-    /* ─────────── Unity lifecycle ─────────── */
-    private void Start()
-    {
-        //OnStartButton();
-    }
+    [Space]
+    public List<GridPosition> Positions = new();
+    public List<GridPosition> CalibratedPositions = new();
+
+    public float LastPickSeconds { get; private set; } = -1f;
+    public Vector3Int LastPickGrid { get; private set; }
+
+    private GameObject _currentApple;
+    private Vector3Int _currentGrid;
+    private float _spawnTime;
+    private readonly System.Random _rng = new();
 
     private void Awake()
     {
-       
-        Apple.PickedCorrectBasket += HandleApplePicked;
-        Apple.PickedWrongBasket += HandleApplePicked;
-        
-        Apple.PickedCorrectBasket += CorrectBasket;
-        Apple.PickedWrongBasket += WrongBasket;
-    }
-    private void OnDestroy()
-    { 
-        Apple.PickedCorrectBasket -= HandleApplePicked;
-        Apple.PickedWrongBasket -= HandleApplePicked;
-        
-        Apple.PickedCorrectBasket -= CorrectBasket;
-        Apple.PickedWrongBasket -= WrongBasket;
+        Apple.PickedCorrectBasket += OnApplePicked;
+        Apple.PickedWrongBasket   += OnApplePicked;
+        Apple.PickedCorrectBasket += ShowCorrectLabel;
+        Apple.PickedWrongBasket   += ShowWrongLabel;
     }
 
-    private void AdjustToHeadset()
+    private void OnDestroy()
     {
-        //xrOrigin = FindAnyObjectByType<XROrigin>();
-        xrOrigin.MoveCameraToWorldLocation(new Vector3(0,1.36f,0f));
-        float currentYaw = xrOrigin.Camera.transform.eulerAngles.y;
-        xrOrigin.RotateAroundCameraUsingOriginUp(-currentYaw);
-        transform.position = Camera.main.transform.position+new Vector3(0.2f,0,0.5f); // Adjust to headset position
-        Vector3 basePos = Camera.main.transform.position;
-        Debug.Log("Adjust");
-        Vector3 healthyTarget = basePos + healthyBasketOffset;
-        Vector3 rottenTarget  = basePos + rottenBasketOffset;
-        healthyBasket.transform.position = healthyTarget;
-        rottenBasket.transform.position = rottenTarget;
+        Apple.PickedCorrectBasket -= OnApplePicked;
+        Apple.PickedWrongBasket   -= OnApplePicked;
+        Apple.PickedCorrectBasket -= ShowCorrectLabel;
+        Apple.PickedWrongBasket   -= ShowWrongLabel;
     }
+
     public void OnStartButton()
     {
-        AdjustToHeadset();
-        //healthyBasket.transform.position = Camera.main.transform.position+new Vector3(0.3f,-0.5f,0.5f);
-        //rottenBasket.transform.position = Camera.main.transform.position+new Vector3(-0.3f,-0.5f,0.5f);
-        GeneratePositions();
+        PositionBasketsRelativeToPlayer();
+        GenerateGridPositions();
         SpawnAllApples();
-        //SpawnRandomApple();
-
         StartCoroutine(CalibrationCountdown());
     }
 
-    IEnumerator CalibrationCountdown()
+    private IEnumerator CalibrationCountdown()
     {
-        yield return new WaitForSecondsRealtime(10);
+        yield return new WaitForSecondsRealtime(StartCountdown);
         foreach (Transform child in transform)
-        {
             Destroy(child.gameObject);
-        }
-        //AdjustToHeadset();
+
         SpawnRandomApple();
     }
-public void OnReleased(Vector3 appleReleasePosition, Apple apple)
-{
-    Bounds healthyZone = new Bounds(
-        healthyBasket.transform.position,
-        Vector3.one/2);
-    Debug.Log($"Healthy Zone Bounds - Center: {healthyZone.center}, Size: {healthyZone.size}");
 
-    Bounds rottenZone = new Bounds(
-        rottenBasket.transform.position,
-        Vector3.one/2);
-    Debug.Log($"Rotten Zone Bounds - Center: {rottenZone.center}, Size: {rottenZone.size}");
-
-    if (apple == null)
+    public void OnAppleRelease(Vector3 releasePos, Apple apple)
     {
-        Debug.LogWarning("No current apple found.");
-        return;
+        if (apple == null)
+        {
+            Debug.LogWarning("OnAppleRelease: apple is null.");
+            return;
+        }
+
+        if (TryGetReleaseZone(releasePos, apple, out var targetBasket))
+            AnimateAppleToBasket(apple, targetBasket);
+        else
+            HandleDroppedApple(apple);
     }
 
-    bool releasedInHealthyZone = healthyZone.Contains(appleReleasePosition);
-    bool releasedInRottenZone  = rottenZone.Contains(appleReleasePosition);
-    
-    if (releasedInHealthyZone || releasedInRottenZone)
+    private bool TryGetReleaseZone(Vector3 pos, Apple apple, out Transform basket)
     {
-        string zoneName = releasedInHealthyZone ? "Healthy Zone" : "Rotten Zone";
-        Debug.Log($"Released IN ZONE: {zoneName}");
-        bool isCorrectBasket = (releasedInHealthyZone && apple.appleType == AppleType.Healthy)
-                               || (releasedInRottenZone  && apple.appleType == AppleType.Rotten);
+        var healthyZone = new Bounds(HealthyBasket.transform.position+Vector3.up*0.25f, new Vector3(0.25f, 0.5f, 0.25f));
+        var rottenZone  = new Bounds(RottenBasket.transform.position+Vector3.up*0.25f,  new Vector3(0.25f, 0.5f, 0.25f));
 
-        // Basket transform reference
-        Transform targetBasket = releasedInHealthyZone ? healthyBasket.transform : rottenBasket.transform;
+        bool inHealthy = healthyZone.Contains(pos);
+        bool inRotten  = rottenZone.Contains(pos);
 
-        // Get random local offset inside a small cube (e.g. 0.2 units in each direction)
-        Vector3 randomLocalOffset = new Vector3(
+        basket = inHealthy ? HealthyBasket.transform :
+            inRotten  ? RottenBasket.transform : null;
+
+        return basket != null;
+    }
+
+    private void AnimateAppleToBasket(Apple apple, Transform basket)
+    {
+        bool isCorrect = (basket == HealthyBasket.transform && apple.appleType == AppleType.Healthy)
+                      || (basket == RottenBasket.transform  && apple.appleType == AppleType.Rotten);
+
+        Vector3 randomOffset = new Vector3(
             UnityEngine.Random.Range(-0.05f, 0.05f),
-            UnityEngine.Random.Range( -0.05f, 0f),  // keep it slightly above the base
+            UnityEngine.Random.Range(-0.05f, 0f),
             UnityEngine.Random.Range(-0.05f, 0.05f)
         );
 
-        // Final target position inside the basket
-        Vector3 targetPosition = targetBasket.position + randomLocalOffset;
-
-        // Tween the apple to the target position
-        apple.transform.DOMove(targetPosition, 0.5f).SetEase(Ease.InOutSine).OnComplete(() =>
-        {
-            apple.Pick(isCorrectBasket);
-        });
+        Vector3 targetPos = basket.position + randomOffset;
+        apple.transform
+             .DOMove(targetPos, 0.5f)
+             .SetEase(Ease.InOutSine)
+             .OnComplete(() => apple.Pick(isCorrect));
     }
-    else
+
+    private void HandleDroppedApple(Apple apple)
     {
-        Debug.Log("Apple was released outside any basket.");
         apple.Pick(false);
         Destroy(apple.gameObject);
-        // Optional: Let the apple fall naturally
     }
-}
 
-
-    /* ─────────── Grid generation ─────────── */
-
-    private void GeneratePositions()
+    private void PositionBasketsRelativeToPlayer()
     {
-        positions.Clear();
+        XrOrigin.MoveCameraToWorldLocation(new Vector3(0, 1.36f, 0));
+        XrOrigin.RotateAroundCameraUsingOriginUp(0);
+        Vector3 basePos = Camera.main.transform.position;
+        HealthyBasket.transform.position = basePos + HealthyBasketOffset;
+        RottenBasket.transform.position  = basePos + RottenBasketOffset;
+    }
 
-        int layerCount       = 3;
-        int horizontalCount  = 8;   // left-right resolution
-        int verticalCount    = 4;    // up-down resolution
-        float radiusStart    = 0.4f;
-        float radiusStep     = 0.2f;
-        float horizontalSpan = 90f; // in degrees
-        float verticalSpan   = 40f;  // in degrees
+    private void GenerateGridPositions()
+    {
+        Positions.Clear();
+
+        const int layerCount = 3;
+        const int horCount = 8, verCount = 4;
+        const float radiusStart = 0.4f, radiusStep = 0.2f;
+        const float hSpan = 90f, vSpan = 40f;
 
         Transform cam = Camera.main.transform;
-        Vector3 offset = new Vector3(0.2f, 0f, -0.2f);
-        Vector3 arcCenter = cam.position + offset; 
-
-        Vector3 baseForward = Quaternion.Euler(0f, arcRotation, 0f) * cam.forward;
-        Vector3 baseRight = Quaternion.AngleAxis(90f, Vector3.up) * baseForward;
+        Vector3 arcCenter = cam.position + new Vector3(0.2f, 0f, -0.2f);
+        Vector3 forward = Quaternion.Euler(0, ArcRotation, 0) * cam.forward;
+        Vector3 right = Quaternion.AngleAxis(90f, Vector3.up) * forward;
 
         for (int layer = 0; layer < layerCount; layer++)
         {
             float radius = radiusStart + layer * radiusStep;
 
-            for (int y = 0; y < verticalCount; y++)
+            for (int y = 0; y < verCount; y++)
             {
-                float vStep = verticalSpan / (verticalCount - 1);
-                float vAngle = -verticalSpan / 2f + y * vStep;
+                float vAngle = Mathf.Lerp(-vSpan / 2f, vSpan / 2f, y / (float)(verCount - 1));
 
-                for (int x = 0; x < horizontalCount; x++)
+                for (int x = 0; x < horCount; x++)
                 {
-                    float hStep = horizontalSpan / (horizontalCount - 1);
-                    float hAngle = -horizontalSpan / 2f + x * hStep;
+                    float hAngle = Mathf.Lerp(-hSpan / 2f, hSpan / 2f, x / (float)(horCount - 1));
+                    Quaternion rot = Quaternion.AngleAxis(hAngle, Vector3.up) * Quaternion.AngleAxis(vAngle, right);
 
-                    Quaternion rotH = Quaternion.AngleAxis(hAngle, Vector3.up);
-                    Quaternion rotV = Quaternion.AngleAxis(vAngle, baseRight);
-
-                    Vector3 direction = rotV * rotH * baseForward;
-
-                    Vector3 pos = arcCenter + direction.normalized * radius;
-                    positions.Add(new GridPosition(Vector3Int.zero, pos));
+                    Vector3 pos = arcCenter + rot * forward * radius;
+                    Positions.Add(new GridPosition(Vector3Int.zero, pos));
                 }
             }
         }
 
-        Debug.Log($"✅ Spawned {positions.Count} apples in {layerCount} spherical shell layers.");
+        Debug.Log($"Generated {Positions.Count} grid positions.");
     }
-
-
-
-
-
-
-
-
-    /* ─────────── Spawning & picking ─────────── */
 
     private void SpawnRandomApple()
     {
-        if (applePrefab == null || healthyMaterial == null || rottenMaterial == null)
+        if (!EnsureSetup()) return;
+        if (CalibratedPositions.Count == 0)
         {
-            Debug.LogError($"{name}: Prefab or materials not assigned!", this);
+            Debug.LogWarning("No calibrated positions to spawn.");
             return;
         }
 
-        if (calibratedPositions.Count == 0)
-        {
-            Debug.LogWarning("No calibrated positions available to spawn apple.");
-            return;
-        }
+        var gridPos = CalibratedPositions[_rng.Next(CalibratedPositions.Count)];
+        _currentGrid = gridPos.Grid;
+        _spawnTime = Time.time;
 
-        // 1 — Choose a random calibrated position
-        int index = rng.Next(calibratedPositions.Count);
-        GridPosition selected = calibratedPositions[index];
-        currentGrid = selected.grid;
-        Vector3 spawnPos = selected.world;
+        _currentApple = Instantiate(ApplePrefab, gridPos.WorldPosition, Quaternion.identity, transform);
+        _currentApple.transform.localScale = Vector3.zero;
+        _currentApple.transform.DOScale(Vector3.one * 0.04f, 0.5f);
 
-        // 2 — Instantiate apple at that position (world-space)
-        currentApple = Instantiate(
-            applePrefab,
-            spawnPos,
-            Quaternion.identity,
-            transform);
+        var apple = _currentApple.GetComponent<Apple>();
+        var renderer = _currentApple.GetComponentInChildren<Renderer>();
+        bool isRotten = _rng.NextDouble() < RottenChance;
 
-        currentApple.transform.localScale = Vector3.zero;
-        currentApple.transform.DOScale(new Vector3(0.04f, 0.04f, 0.04f), 0.5f);
-
-        // 3 — Record timestamp
-        spawnTimestamp = Time.time;
-
-        // 4 — Choose apple type & material
-        bool makeRotten = rng.NextDouble() < rottenChance;
-        Apple apple = currentApple.GetComponent<Apple>();
-        Renderer renderer = currentApple.transform.GetChild(0).GetComponent<Renderer>();
-
-        apple.position = selected;
+        apple.position = gridPos;
         apple.isCalibrating = false;
+        apple.appleType = isRotten ? AppleType.Rotten : AppleType.Healthy;
+        renderer.material = isRotten ? RottenMaterial : HealthyMaterial;
+    }
 
-        if (makeRotten)
+    private void SpawnAllApples()
+    {
+        if (!EnsureSetup()) return;
+
+        foreach (var gp in Positions)
         {
-            apple.appleType = AppleType.Rotten;
-            renderer.material = rottenMaterial;
+            var go = Instantiate(ApplePrefab, gp.WorldPosition, Quaternion.identity, transform);
+            go.transform.localScale = Vector3.zero;
+            go.transform.DOScale(Vector3.one * 0.04f, 0.5f);
+
+            var apple = go.GetComponent<Apple>();
+            var renderer = go.GetComponentInChildren<Renderer>();
+            bool isRotten = _rng.NextDouble() < RottenChance;
+
+            apple.position = gp;
+            apple.isCalibrating = true;
+            apple.appleType = isRotten ? AppleType.Rotten : AppleType.Healthy;
+            renderer.material = isRotten ? RottenMaterial : HealthyMaterial;
         }
-        else
-        {
-            apple.appleType = AppleType.Healthy;
-            renderer.material = healthyMaterial;
-        }
+
+        Debug.Log($"Spawned {Positions.Count} apples for calibration.");
     }
 
-
-    private void CorrectBasket(Apple picked)
+    private bool EnsureSetup()
     {
-        basketText.text = "Dogru";
+        bool ok = ApplePrefab && HealthyMaterial && RottenMaterial;
+        if (!ok)
+            Debug.LogError($"{name}: Missing prefab or materials.");
+        return ok;
     }
-    
-    private void WrongBasket(Apple picked)
+
+    private void OnApplePicked(Apple apple)
     {
-        basketText.text = "Yanlis";
-    }
-    
-    private void HandleApplePicked(Apple picked)
-    {
-        Debug.Log("Apple picked!");
-        if (picked.gameObject != currentApple) return;
+        if (apple.gameObject != _currentApple) return;
 
-        /* ─── analytics ─── */
-        lastPickSeconds = Time.time - spawnTimestamp;
-        lastPickGrid    = currentGrid;
-        Debug.Log($"Apple picked in {lastPickSeconds:F2}s at {lastPickGrid}");
-        
-        // todo: don't use find
-        FirestoreAppointmentManager mgr = FindAnyObjectByType<FirestoreAppointmentManager>();
-        if (mgr != null)
-            mgr.SavePickAnalytics(currentGrid, lastPickSeconds);
+        LastPickSeconds = Time.time - _spawnTime;
+        LastPickGrid    = _currentGrid;
+        Debug.Log($"Picked in {LastPickSeconds:F2}s at {_currentGrid}");
 
+        var mgr = FindAnyObjectByType<FirestoreAppointmentManager>();
+        mgr?.SavePickAnalytics(_currentGrid, LastPickSeconds);
 
-        /* ─── spawn replacement ─── */
         SpawnRandomApple();
     }
-    
-    public void SpawnAllApples()
+
+    private void ShowCorrectLabel(Apple _) => BasketLabel.text = "Doğru";
+    private void ShowWrongLabel(Apple _)   => BasketLabel.text = "Yanlış";
+
+    public Material CalibratePosition(GridPosition position)
     {
-        if (applePrefab == null || healthyMaterial == null || rottenMaterial == null)
-        {
-            Debug.LogError($"{name}: Prefab or materials not assigned!", this);
-            return;
-        }
-
-        foreach (var pos in positions)
-        {
-            GameObject apple = Instantiate(
-                applePrefab,
-                pos.world,  // Remove transform.position offset
-                Quaternion.identity,
-                transform);
-
-            apple.transform.localScale = Vector3.zero;
-            apple.transform.DOScale(new Vector3(0.04f, 0.04f, 0.04f), 0.5f);
-
-            bool makeRotten = rng.NextDouble() < rottenChance;
-            var appleScript = apple.GetComponent<Apple>();
-            var renderer = apple.transform.GetChild(0).GetComponent<Renderer>();
-            appleScript.position = pos;
-            appleScript.isCalibrating = true;
-            if (makeRotten)
-            {
-                appleScript.appleType = AppleType.Rotten;
-                renderer.material = rottenMaterial;
-            }
-            else
-            {
-                appleScript.appleType = AppleType.Healthy;
-                renderer.material = healthyMaterial;
-            }
-        }
-
-        Debug.Log($"Spawned {positions.Count} apples in arc.");
+        CalibratedPositions.Add(position);
+        return TransparentMaterial;
     }
-
-    public Material OnCalibrationTouched(GridPosition position)
-    {
-        calibratedPositions.Add(position);
-        return transparentMaterial;
-    }
-
 }

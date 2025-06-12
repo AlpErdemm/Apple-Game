@@ -24,7 +24,6 @@ public class Apple : MonoBehaviour
         grabInteractable = GetComponent<XRGrabInteractable>();
         if (isCalibrating)
         {
-            Destroy(GetComponent<AppleGrabCondition>());
             Destroy(grabInteractable);
         }
 
@@ -48,7 +47,7 @@ public class Apple : MonoBehaviour
 
     private void OnGrabbed(SelectEnterEventArgs args)
     {
-        parentSpawner.grabEffect.FireEffect(transform.position);
+        parentSpawner.GrabEffect.FireEffect(transform.position);
         isGrabbed = true;
     }
 
@@ -63,7 +62,7 @@ public class Apple : MonoBehaviour
         }
         //GetComponent<Rigidbody>().isKinematic = false;
         //GetComponent<Rigidbody>().useGravity = true;
-        parentSpawner.OnReleased(transform.position, this);
+        parentSpawner.OnAppleRelease(transform.position, this);
         isGrabbed = false;
         isReleased = true;
     }
@@ -73,7 +72,7 @@ public class Apple : MonoBehaviour
         if (isCalibrationTouched || !isCalibrating) return;
         isCalibrationTouched = true;
         
-        Material material = parentSpawner.OnCalibrationTouched(position);
+        Material material = parentSpawner.CalibratePosition(position);
         Renderer renderer = transform.GetChild(0).GetComponent<Renderer>();
         if (renderer != null && material != null)
         {

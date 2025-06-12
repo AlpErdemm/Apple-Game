@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Game Start.unity
+    path: Assets/Scenes/Calibration+RandomSpawn.unity
     guid: a060da1bd03344565bd8abadd43c57ee
   - enabled: 0
     path: Assets/Scenes/GameNext.unity
