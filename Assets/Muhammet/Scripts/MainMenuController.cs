@@ -37,11 +37,18 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Button handSelectRightBtn;
 
 
+    [Header("Images")]
+    [SerializeField] private Image[] modeImages;
+
+
+
     private Vector3 basketPosition;
     private Vector3 applePosition;
 
     private bool isSelectedRightHand;
     private bool isCalibrationOpen;
+
+    private int activeModeId;
 
     private PatientDashBoardCreator patientDashBoard;
     private void Start()
@@ -50,8 +57,88 @@ public class MainMenuController : MonoBehaviour
         patientDashBoard = GetComponent<PatientDashBoardCreator>();
         DisableAllScene();
         mainMenuCanvas.SetActive(true);
+        GameMode1();
+
 
     }
+
+    private void DisableAppleAndBastekInuts()
+    {
+        basketPositionX.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        basketPositionY.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        basketPositionZ.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        basketPositionX.enabled = false;
+        basketPositionY.enabled = false;
+        basketPositionZ.enabled = false;
+
+        applePositionX.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        applePositionY.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        applePositionZ.textComponent.GetComponent<TextMeshProUGUI>().color = Color.grey;
+        applePositionX.enabled = false;
+        applePositionY.enabled = false;
+        applePositionZ.enabled = false;
+    }
+    private void EnableAppleAndBastekInuts()
+    {
+        basketPositionX.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        basketPositionY.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        basketPositionZ.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        basketPositionX.enabled = true;
+        basketPositionY.enabled = true;
+        basketPositionZ.enabled = true;
+
+        applePositionX.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        applePositionY.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        applePositionZ.textComponent.GetComponent<TextMeshProUGUI>().color = Color.black;
+        applePositionX.enabled = true;
+        applePositionY.enabled = true;
+        applePositionZ.enabled = true;
+    }
+
+    private void DisableAllModeImages()
+    {
+        foreach (Image image in modeImages)
+        {
+            image.color = Color.red;
+        }
+    }
+
+    public void GameMode1()
+    {
+        DisableAllModeImages();
+        EnableAppleAndBastekInuts();
+        modeImages[0].color = Color.green;
+        activeModeId = 1;
+    }
+    public void GameMode2()
+    {
+        DisableAllModeImages();
+        DisableAppleAndBastekInuts();
+        modeImages[1].color = Color.green;
+        activeModeId = 2;
+    }
+    public void GameMode3()
+    {
+        DisableAllModeImages();
+        DisableAppleAndBastekInuts();
+        modeImages[2].color = Color.green;
+        activeModeId = 3;
+    }
+    public void GameMode4()
+    {
+        DisableAllModeImages();
+        DisableAppleAndBastekInuts();
+        modeImages[3].color = Color.green;
+        activeModeId = 4;
+    }
+    public void GameMode5()
+    {
+        DisableAllModeImages();
+        DisableAppleAndBastekInuts();
+        modeImages[4].color = Color.green;
+        activeModeId = 5;
+    }
+
 
     public void DisableAllScene()
     {
@@ -106,14 +193,27 @@ public class MainMenuController : MonoBehaviour
 
     public void StartGameBtn()
     {
-        applePosition = new Vector3(float.Parse(applePositionX.text), float.Parse(applePositionY.text), float.Parse(applePositionZ.text));
-        basketPosition = new Vector3(float.Parse(basketPositionX.text), float.Parse(basketPositionY.text), float.Parse(basketPositionZ.text));
+        if (activeModeId == 1)
+        {
+            applePosition = new Vector3(float.Parse(applePositionX.text), float.Parse(applePositionY.text), float.Parse(applePositionZ.text));
+            basketPosition = new Vector3(float.Parse(basketPositionX.text), float.Parse(basketPositionY.text), float.Parse(basketPositionZ.text));
 
-        Debug.Log($"Game Starting !!\n" +
-            $"Calibration = {isCalibrationOpen}\n" +
-            $"SelectedRightHand = {isSelectedRightHand}\n" +
-            $"Basket Position = {basketPosition}\n" +
-            $"Apple Position{applePosition}");
+            Debug.Log($"Game Starting !!\n" +
+                $"Calibration = {isCalibrationOpen}\n" +
+                $"SelectedRightHand = {isSelectedRightHand}\n" +
+                $"GameModeId = {activeModeId}\n" +
+                $"Basket Position = {basketPosition}\n" +
+                $"Apple Position{applePosition}");
+        }
+        else
+        {
+            Debug.Log($"Game Starting !!\n" +
+                $"Calibration = {isCalibrationOpen}\n" +
+                $"SelectedRightHand = {isSelectedRightHand}\n" +
+                $"GameModeId = {activeModeId}");
+        }
+
+
     }
 
     public void OpenCalibrationBtn()
