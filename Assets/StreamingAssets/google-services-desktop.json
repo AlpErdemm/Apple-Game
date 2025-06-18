@@ -1,26 +1,28 @@
 {
   "project_info": {
-    "project_number": "952115674678",
-    "project_id": "rehabilitasyon-ee609",
-    "storage_bucket": "rehabilitasyon-ee609.firebasestorage.app"
+    "project_number": "386753603604",
+    "project_id": "apple-harvest-vr",
+    "storage_bucket": "apple-harvest-vr.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:952115674678:android:a86e6727bf30db8d132297",
+        "mobilesdk_app_id": "1:386753603604:ios:ee4cbe1e87b8783ddf1f01",
         "android_client_info": {
-          "package_name": "com.Trb.AppleGame"
+          "package_name": "com.Company.Apple-Game-2"
         }
       },
-      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBWCmVSv6K9Kpm2QKWyUXlIl10HCK9Pgfg"
+          "current_key": "AIzaSyBLAc5-hwv5IwEQsRRc5PaH_nXCsZYKJ34"
         }
       ],
       "services": {
+        "analytics_service": {
+          "status": 0
+        },
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "status": 1
         }
       }
     }
