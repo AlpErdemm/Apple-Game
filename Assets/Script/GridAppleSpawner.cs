@@ -26,6 +26,7 @@ public struct GridPosition
 
 public class GridAppleSpawner : MonoBehaviour
 {
+    public PositionLogger positionLogger;
     [Header("Hand Joints")]
     public List<Transform> leftHandTips = new();
     public List<Transform> rightHandTips = new();
@@ -74,7 +75,7 @@ public class GridAppleSpawner : MonoBehaviour
 
     private List<Vector3Int> pickedGridsInMeasureMode = new();
     private Coroutine measureTimerCoroutine;
-
+    private GridPosition selected;
     private void Awake()
     {
         Apple.PickedCorrectBasket += HandleApplePicked;
@@ -91,6 +92,10 @@ public class GridAppleSpawner : MonoBehaviour
         Apple.PickedWrongBasket -= WrongBasket;
     }
 
+    public void Grabbed()
+    {
+        positionLogger.SwitchToBasket();
+    }
     private void AdjustToHeadset()
     {
         xrOrigin.MoveCameraToWorldLocation(new Vector3(0, 1.36f, 0f));
@@ -114,7 +119,7 @@ public class GridAppleSpawner : MonoBehaviour
 
         AdjustToHeadset();
         GeneratePositions();
-        SpawnAllApples();
+        /*SpawnAllApples();
 
         if (isMeasureMode)
         {
@@ -125,6 +130,42 @@ public class GridAppleSpawner : MonoBehaviour
         else
         {
             StartCoroutine(CalibrationCountdown());
+        }*/
+        SpawnSpecific();
+        SpawnOne();
+    }
+
+    public void SpawnSpecific()
+    {
+        int index = rng.Next(positions.Count);
+        selected = positions[index];
+        currentGrid = selected.grid;
+    }
+
+    public void SpawnOne()
+    {
+        Vector3 spawnPos = selected.world;
+        currentApple = Instantiate(applePrefab, spawnPos, Quaternion.identity, transform);
+        currentApple.transform.localScale = Vector3.zero;
+        currentApple.transform.DOScale(new Vector3(0.04f, 0.04f, 0.04f), 0.5f);
+        spawnTimestamp = Time.time;
+
+        bool makeRotten = rng.NextDouble() < rottenChance;
+        Apple apple = currentApple.GetComponent<Apple>();
+        Renderer renderer = currentApple.transform.GetChild(0).GetComponent<Renderer>();
+
+        apple.position = selected;
+        apple.isCalibrating = false;
+
+        if (makeRotten)
+        {
+            apple.appleType = AppleType.Rotten;
+            renderer.material = rottenMaterial;
+        }
+        else
+        {
+            apple.appleType = AppleType.Healthy;
+            renderer.material = healthyMaterial;
         }
     }
 
@@ -196,6 +237,8 @@ public class GridAppleSpawner : MonoBehaviour
 
     public void OnReleased(Vector3 appleReleasePosition, GridPosition grid, Apple apple)
     {
+        positionLogger.StartLogging();
+        positionLogger.SwitchToApple();
         Bounds healthyZone = new Bounds(healthyBasket.transform.position, Vector3.one / 2);
         Bounds rottenZone = new Bounds(rottenBasket.transform.position, Vector3.one / 2);
 
@@ -239,6 +282,8 @@ public class GridAppleSpawner : MonoBehaviour
             apple.Pick(false);
             Destroy(apple.gameObject);
         }
+
+        SpawnOne();
     }
 
     private void GeneratePositions()

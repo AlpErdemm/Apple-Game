@@ -48,6 +48,7 @@ public class Apple : MonoBehaviour
 
     private void OnGrabbed(SelectEnterEventArgs args)
     {
+        parentSpawner.Grabbed();
         parentSpawner.grabEffect.FireEffect(transform.position);
         isGrabbed = true;
     }
