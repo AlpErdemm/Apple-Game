@@ -12,6 +12,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject addPatientModal;
     [SerializeField] private GameObject patientDatailModal;
     [SerializeField] private GameObject gameConfigurationModal;
+    [SerializeField] private GameObject gameInProgressModal;
 
     [Header("InputFields")]
     [SerializeField] private TMP_InputField nameInputField;
@@ -31,8 +32,6 @@ public class MainMenuController : MonoBehaviour
     [Header("Buttons")]
     [SerializeField] private Button startNewGameBtn;
     [SerializeField] private Button endGameBtn;
-    [SerializeField] private Button calibrationOpenBtn;
-    [SerializeField] private Button calibrationCloseBtn;
     [SerializeField] private Button handSelectLeftBtn;
     [SerializeField] private Button handSelectRightBtn;
 
@@ -40,7 +39,7 @@ public class MainMenuController : MonoBehaviour
     [Header("Images")]
     [SerializeField] private Image[] modeImages;
 
-
+    public DatabaseHandler databaseHandler;
 
     private Vector3 basketPosition;
     private Vector3 applePosition;
@@ -50,6 +49,9 @@ public class MainMenuController : MonoBehaviour
 
     private int activeModeId;
 
+    private string currentName;
+    private string currentSurname;
+
     private PatientDashBoardCreator patientDashBoard;
     private void Start()
     {
@@ -58,9 +60,8 @@ public class MainMenuController : MonoBehaviour
         DisableAllScene();
         mainMenuCanvas.SetActive(true);
         GameMode1();
-
-
     }
+    
 
     private void DisableAppleAndBastekInuts()
     {
@@ -183,21 +184,20 @@ public class MainMenuController : MonoBehaviour
         applePositionX.text = "0";
         applePositionY.text = "0";
         applePositionZ.text = "0";
-
-        calibrationOpenBtn.GetComponent<Image>().color = Color.red;
-        calibrationCloseBtn.GetComponent<Image>().color = Color.green;
+        
         handSelectLeftBtn.GetComponent<Image>().color = Color.green;
         handSelectRightBtn.GetComponent<Image>().color = Color.red;
     }
-
-
+    
     public void StartGameBtn()
     {
+        gameConfigurationModal.SetActive(false);
+        gameInProgressModal.SetActive(true);
         if (activeModeId == 1)
         {
             applePosition = new Vector3(float.Parse(applePositionX.text), float.Parse(applePositionY.text), float.Parse(applePositionZ.text));
             basketPosition = new Vector3(float.Parse(basketPositionX.text), float.Parse(basketPositionY.text), float.Parse(basketPositionZ.text));
-
+            
             Debug.Log($"Game Starting !!\n" +
                 $"Calibration = {isCalibrationOpen}\n" +
                 $"SelectedRightHand = {isSelectedRightHand}\n" +
@@ -212,21 +212,11 @@ public class MainMenuController : MonoBehaviour
                 $"SelectedRightHand = {isSelectedRightHand}\n" +
                 $"GameModeId = {activeModeId}");
         }
+        
+        // Ä°sim soyisim nasÄ±l alÄ±caz
+        databaseHandler.AddSessionCall(currentName, currentSurname,activeModeId, isSelectedRightHand?0:1);
 
 
-    }
-
-    public void OpenCalibrationBtn()
-    {
-        isCalibrationOpen = true;
-        calibrationOpenBtn.GetComponent<Image>().color = Color.green;
-        calibrationCloseBtn.GetComponent<Image>().color = Color.red;
-    }
-    public void CloseCalibrationBtn()
-    {
-        isCalibrationOpen = false;
-        calibrationOpenBtn.GetComponent<Image>().color = Color.red;
-        calibrationCloseBtn.GetComponent<Image>().color = Color.green;
     }
 
     public void SelectRightHand()
@@ -251,6 +241,8 @@ public class MainMenuController : MonoBehaviour
             errorText.text = "Ad veya soyad bos olamaz !";
             return;
         }
+        
+        databaseHandler.AddPatientCall(nameInputField.text, surnameInputField.text);
         Patient patient = new Patient();
         patient.patientId = System.Guid.NewGuid().ToString();
         patient.patientName = nameInputField.text + " " + surnameInputField.text;
@@ -268,11 +260,14 @@ public class MainMenuController : MonoBehaviour
     {
         Debug.Log("Clicked on: " + patient.patientName);
         ResetGameConfigurationMenu();
+
+        currentName = patient.patientName;
+        currentSurname = patient.patientSurname;
         
         patientNameSurnameText.text = patient.patientName;
         if (patient.rangeOfMotion == 0)
         {
-            patientRangeOfMotionText.text = "Hareket Mesafesi : ölçülmedi !";
+            patientRangeOfMotionText.text = "Hareket Mesafesi : ï¿½lï¿½ï¿½lmedi !";
         }
         else
         {
@@ -291,5 +286,11 @@ public class MainMenuController : MonoBehaviour
         }
         patientDatailModal.SetActive(true);
 
+    }
+    public void OnEndGameButtonClicked()
+    {
+        databaseHandler.DeactivateSessionByIdCall(databaseHandler.currentPatientId, databaseHandler.currentSessionId);
+        gameConfigurationModal.SetActive(true);
+        gameInProgressModal.SetActive(false);
     }
 }

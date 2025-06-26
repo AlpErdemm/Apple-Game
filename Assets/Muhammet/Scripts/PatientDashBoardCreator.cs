@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,37 +9,59 @@ public class PatientDashBoardCreator : MonoBehaviour
     public GameObject patientButtonPrefab; // Inspector'dan atanacak prefab
     public Transform contentParent; // Scroll View > Viewport > Content nesnesi
     private MainMenuController mainMenuController;
-
-    void Start()
+    public DatabaseHandler databaseHandler;
+    
+    async void Start()
     {
         mainMenuController = GetComponent<MainMenuController>();
-        MuhammetDataBase.CreateRandomPatients(10);
 
-        LoadAllPatientsToDashBoard();
+        // Veritabanından hastaları çek
+        var patients = await databaseHandler.GetAllPatients();
+
+        // Çekilen hastaları göster
+        await LoadAllPatientsToDashBoard(patients);
     }
 
-    public void LoadAllPatientsToDashBoard()
+    public async Task LoadAllPatientsToDashBoard(List<Dictionary<string, object>> patients)
     {
-        foreach (Patient patient in MuhammetDataBase.patients)
+        foreach (var patientData in patients)
         {
+            string name = patientData.ContainsKey("name") ? patientData["name"].ToString() : "Unknown";
+            string surname = patientData.ContainsKey("surname") ? patientData["surname"].ToString() : "";
+            bool isInGame = patientData.ContainsKey("isInGame") && (bool)patientData["isInGame"];
+
+            // İsim birleştir
+            string fullName = $"{name} {surname}";
+
             GameObject newButton = Instantiate(patientButtonPrefab, contentParent);
 
-            // Butonun �st�ndeki yaz�
+            // Buton üzerindeki yazı
             TextMeshProUGUI buttonText = newButton.GetComponentInChildren<TextMeshProUGUI>();
-            buttonText.text = patient.patientName;
+            buttonText.text = fullName;
 
-            // Renk Ayarlama
+            // Renk Ayarı
             Image background = newButton.GetComponent<Image>();
             if (background != null)
             {
-                background.color = patient.isInGame ? Color.cyan : Color.red;
+                background.color = isInGame ? Color.cyan : Color.red;
             }
 
-            // Ekstra olarak t�klama i�levi eklenecekse:
+            // Tıklama işlevi
             Button btn = newButton.GetComponent<Button>();
-            btn.onClick.AddListener(() => mainMenuController.OnPatientButtonClicked(patient));
+            btn.onClick.AddListener(() =>
+            {
+                // Hasta nesnesi oluştur (ID gerekli ise eklenebilir)
+                var patient = new Patient
+                {
+                    patientName = name,
+                    patientSurname = surname,
+                    isInGame = isInGame
+                };
+                mainMenuController.OnPatientButtonClicked(patient);
+            });
         }
     }
+
     public void AddNewPatientToDashBoard(Patient patient)
     {
         GameObject newButton = Instantiate(patientButtonPrefab, contentParent);
@@ -49,7 +73,7 @@ public class PatientDashBoardCreator : MonoBehaviour
         {
             background.color = patient.isInGame ? Color.cyan : Color.red;
         }
-        // Ekstra olarak t�klama i�levi eklenecekse:
+        // Ekstra olarak t�klama i�levi eklenecekse:
         Button btn = newButton.GetComponent<Button>();
         btn.onClick.AddListener(() => mainMenuController.OnPatientButtonClicked(patient));
 

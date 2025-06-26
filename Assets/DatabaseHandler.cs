@@ -1,18 +1,24 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Firebase.Firestore;
 using Firebase.Extensions;
 using UnityEngine;
 
-public class FirestoreDemo : MonoBehaviour
+public class DatabaseHandler : MonoBehaviour
 {
     FirebaseFirestore db;
-    private string currentSessionId;
-    private string currentPatientId;
+    public string currentSessionId;
+    public string currentPatientId;
+
+    private void Awake()
+    {
+        db = FirebaseFirestore.DefaultInstance;
+    }
 
     async void Start()
     {
-        db = FirebaseFirestore.DefaultInstance;
+        /*db = FirebaseFirestore.DefaultInstance;
 
         // Yeni Hasta Eklemek
         await AddPatient("Arda", "Turan");
@@ -28,10 +34,25 @@ public class FirestoreDemo : MonoBehaviour
         foreach (var patient in patients)
         {
             Debug.Log($"Hasta: {patient["name"]} {patient["surname"]}, ROM: {patient["rom"]}, ID: {patient["id"]}");
-        }
+        }*/
     }
 
-// ✅ Hasta ekleme artık `async` oldu ve sonuç bekleniyor
+    async public void AddPatientCall(string patientName, string patientSurname)
+    {
+        await AddPatient(patientName, patientSurname);
+    }
+    
+    async public void AddSessionCall(string patientName, string patientSurname, int mode, int hand)
+    {
+        await AddSessionWithNameSurname(patientName, patientSurname, mode, hand);
+    }
+    
+    async public void DeactivateSessionByIdCall(string patientId, string sessionId)
+    {
+        await DeactivateSessionById(patientId, sessionId);
+    }
+
+    // ✅ Hasta ekleme artık `async` oldu ve sonuç bekleniyor
     async Task AddPatient(string patientName, string patientSurname)
     {
         var snapshot = await db.Collection("patients")
