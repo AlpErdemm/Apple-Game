@@ -11,7 +11,8 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private GameObject mainMenuCanvas;
     [SerializeField] private GameObject addPatientModal;
     [SerializeField] private GameObject patientDatailModal;
-    [SerializeField] private GameObject gameConfigurationModal;
+    [SerializeField] private GameObject gameConfigurationFirstModal;
+    [SerializeField] private GameObject gameConfigurationSecondModal;
     [SerializeField] private GameObject gameInProgressModal;
 
     [Header("InputFields")]
@@ -27,14 +28,15 @@ public class MainMenuController : MonoBehaviour
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI errorText;
     [SerializeField] private TextMeshProUGUI patientNameSurnameText;
-    [SerializeField] private TextMeshProUGUI patientRangeOfMotionText;
 
     [Header("Buttons")]
     [SerializeField] private Button startNewGameBtn;
     [SerializeField] private Button endGameBtn;
     [SerializeField] private Button handSelectLeftBtn;
     [SerializeField] private Button handSelectRightBtn;
-
+    [SerializeField] private Button handCurl20;
+    [SerializeField] private Button handCurl40;
+    [SerializeField] private Button handCurl60;
 
     [Header("Images")]
     [SerializeField] private Image[] modeImages;
@@ -44,6 +46,7 @@ public class MainMenuController : MonoBehaviour
     private Vector3 basketPosition;
     private Vector3 applePosition;
 
+    private int selectedCurlValue = 60; // Default to 60
     private bool isSelectedRightHand;
     private bool isCalibrationOpen;
 
@@ -55,6 +58,9 @@ public class MainMenuController : MonoBehaviour
     private PatientDashBoardCreator patientDashBoard;
     private void Start()
     {
+        handCurl20.onClick.AddListener(SelectCurl20);
+        handCurl40.onClick.AddListener(SelectCurl40);
+        handCurl60.onClick.AddListener(SelectCurl60);
         errorText.text = string.Empty;
         patientDashBoard = GetComponent<PatientDashBoardCreator>();
         DisableAllScene();
@@ -146,7 +152,8 @@ public class MainMenuController : MonoBehaviour
         mainMenuCanvas.SetActive(false);
         addPatientModal.SetActive(false);
         patientDatailModal.SetActive(false);
-        gameConfigurationModal.SetActive(false);
+        gameConfigurationFirstModal.SetActive(false);
+        gameConfigurationSecondModal.SetActive(false);
     }
 
     public void OpenAddPatientModalBtn()
@@ -157,26 +164,41 @@ public class MainMenuController : MonoBehaviour
     {
         addPatientModal.SetActive(false);
     }
+    public void OpenPatientDetailsModal()
+    {
+        patientDatailModal.SetActive(true);
+        gameConfigurationFirstModal.SetActive(false);
+    }
     public void ClosePatientDetailsModal()
     {
         patientDatailModal.SetActive(false);
-
-
+        
     }
-    public void CloseGameConfigurationModal()
+    public void CloseGameConfigurationFirstModal()
     {
-        gameConfigurationModal.SetActive(false);
+        gameConfigurationFirstModal.SetActive(false);
     }
 
-    public void OpenGameCanfigurationModal()
+    public void OpenGameConfigurationFirstModal()
     {
-        gameConfigurationModal.SetActive(true);
+        gameConfigurationFirstModal.SetActive(true);
+        gameConfigurationSecondModal.SetActive(false);
+    }
+    public void CloseGameConfigurationSecondModal()
+    {
+        gameConfigurationSecondModal.SetActive(false);
+    }
 
+    public void OpenGameConfigurationSecondModal()
+    {
+        gameConfigurationFirstModal.SetActive(false);
+        gameConfigurationSecondModal.SetActive(true);
     }
 
     private void ResetGameConfigurationMenu()
     {
         isSelectedRightHand = false;
+        selectedCurlValue = 60;
         isCalibrationOpen = false;
         basketPositionX.text = "0";
         basketPositionY.text = "0";
@@ -187,11 +209,16 @@ public class MainMenuController : MonoBehaviour
         
         handSelectLeftBtn.GetComponent<Image>().color = Color.green;
         handSelectRightBtn.GetComponent<Image>().color = Color.red;
+        
+                
+        handCurl20.GetComponent<Image>().color = Color.red;
+        handCurl40.GetComponent<Image>().color = Color.red;
+        handCurl60.GetComponent<Image>().color = Color.green;
     }
     
     public void StartGameBtn()
     {
-        gameConfigurationModal.SetActive(false);
+        gameConfigurationSecondModal.SetActive(false);
         gameInProgressModal.SetActive(true);
         if (activeModeId == 1)
         {
@@ -214,9 +241,14 @@ public class MainMenuController : MonoBehaviour
         }
         
         // İsim soyisim nasıl alıcaz
-        databaseHandler.AddSessionCall(currentName, currentSurname,activeModeId, isSelectedRightHand?0:1);
+        databaseHandler.AddSessionCall(currentName, currentSurname,activeModeId, isSelectedRightHand?0:1, selectedCurlValue);
 
 
+    }
+    public void ContinueBtn()
+    {
+        gameConfigurationFirstModal.SetActive(false);
+        gameConfigurationSecondModal.SetActive(true);
     }
 
     public void SelectRightHand()
@@ -231,6 +263,30 @@ public class MainMenuController : MonoBehaviour
         handSelectLeftBtn.GetComponent<Image>().color = Color.green;
         handSelectRightBtn.GetComponent<Image>().color = Color.red;
     }
+    public void SelectCurl20()
+    {
+        selectedCurlValue = 20;
+        handCurl20.GetComponent<Image>().color = Color.green;
+        handCurl40.GetComponent<Image>().color = Color.red;
+        handCurl60.GetComponent<Image>().color = Color.red;
+    }
+    
+    public void SelectCurl40()
+    {
+        selectedCurlValue = 40;
+        handCurl20.GetComponent<Image>().color = Color.red;
+        handCurl40.GetComponent<Image>().color = Color.green;
+        handCurl60.GetComponent<Image>().color = Color.red;
+    }
+    
+    public void SelectCurl60()
+    {
+        selectedCurlValue = 60;
+        handCurl20.GetComponent<Image>().color = Color.red;
+        handCurl40.GetComponent<Image>().color = Color.red;
+        handCurl60.GetComponent<Image>().color = Color.green;
+    }
+    
 
 
 
@@ -265,14 +321,6 @@ public class MainMenuController : MonoBehaviour
         currentSurname = patient.patientSurname;
         
         patientNameSurnameText.text = patient.patientName;
-        if (patient.rangeOfMotion == 0)
-        {
-            patientRangeOfMotionText.text = "Hareket Mesafesi : �l��lmedi !";
-        }
-        else
-        {
-            patientRangeOfMotionText.text = "Hareket Mesafesi : " + patient.rangeOfMotion.ToString();
-        }
 
         if (patient.isInGame)
         {
@@ -290,7 +338,7 @@ public class MainMenuController : MonoBehaviour
     public void OnEndGameButtonClicked()
     {
         databaseHandler.DeactivateSessionByIdCall(databaseHandler.currentPatientId, databaseHandler.currentSessionId);
-        gameConfigurationModal.SetActive(true);
+        patientDatailModal.SetActive(true);
         gameInProgressModal.SetActive(false);
     }
 }

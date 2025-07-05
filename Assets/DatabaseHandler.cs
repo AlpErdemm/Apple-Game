@@ -42,9 +42,9 @@ public class DatabaseHandler : MonoBehaviour
         await AddPatient(patientName, patientSurname);
     }
     
-    async public void AddSessionCall(string patientName, string patientSurname, int mode, int hand)
+    async public void AddSessionCall(string patientName, string patientSurname, int mode, int hand, int curl)
     {
-        await AddSessionWithNameSurname(patientName, patientSurname, mode, hand);
+        await AddSessionWithNameSurname(patientName, patientSurname, mode, hand, curl);
     }
     
     async public void DeactivateSessionByIdCall(string patientId, string sessionId)
@@ -79,13 +79,14 @@ public class DatabaseHandler : MonoBehaviour
     }
     
     
-    async Task AddSessionToPatient(string patientId, bool isActive, int mode, int hand)
+    async Task AddSessionToPatient(string patientId, bool isActive, int mode, int hand, int curl)
     {
         var sessionData = new Dictionary<string, object>
         {
             { "active", isActive },
             { "mode", mode },
-            { "hand", hand }
+            { "hand", hand },
+            { "curl", curl }
         };
 
         var result = await db.Collection("patients")
@@ -98,10 +99,10 @@ public class DatabaseHandler : MonoBehaviour
         currentSessionId = result.Id;
     }
 
-    async Task AddSessionWithNameSurname(string patientName, string patientSurname, int mode, int hand)
+    async Task AddSessionWithNameSurname(string patientName, string patientSurname, int mode, int hand, int curl)
     {
         string id = await GetPatientIdByNameSurname(patientName, patientSurname);
-        await AddSessionToPatient(id, true, mode, hand);
+        await AddSessionToPatient(id, true, mode, hand, curl);
     }
     
     // 🔍 Hasta ad ve soyadına göre ID'yi döndürür
