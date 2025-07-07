@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using TMPro;
 using Unity.VisualScripting;
@@ -37,6 +38,9 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Button handCurl20;
     [SerializeField] private Button handCurl40;
     [SerializeField] private Button handCurl60;
+    
+    [SerializeField] private Button firstLevelBtn;
+    [SerializeField] private Button lastLevelBtn;
 
     [Header("Images")]
     [SerializeField] private Image[] modeImages;
@@ -47,14 +51,11 @@ public class MainMenuController : MonoBehaviour
     private Vector3 applePosition;
 
     private int selectedCurlValue = 60; // Default to 60
+    private bool selectedFirstLevel = true; 
     private bool isSelectedRightHand;
     private bool isCalibrationOpen;
 
     private int activeModeId;
-
-    private string currentName;
-    private string currentSurname;
-
     private PatientDashBoardCreator patientDashBoard;
     private void Start()
     {
@@ -240,8 +241,7 @@ public class MainMenuController : MonoBehaviour
                 $"GameModeId = {activeModeId}");
         }
         
-        // İsim soyisim nasıl alıcaz
-        databaseHandler.AddSessionCall(currentName, currentSurname,activeModeId, isSelectedRightHand?0:1, selectedCurlValue);
+        databaseHandler.AddSessionCall(activeModeId, isSelectedRightHand?0:1, selectedCurlValue, selectedFirstLevel?0:1);
 
 
     }
@@ -287,9 +287,20 @@ public class MainMenuController : MonoBehaviour
         handCurl60.GetComponent<Image>().color = Color.green;
     }
     
-
-
-
+    public void SelectFirstLevel()
+    {
+        selectedFirstLevel = true;
+        firstLevelBtn.GetComponent<Image>().color = Color.green;
+        lastLevelBtn.GetComponent<Image>().color = Color.red;
+    }
+    
+    public void SelectLastLevel()
+    {
+        selectedFirstLevel = false;
+        firstLevelBtn.GetComponent<Image>().color = Color.red;
+        lastLevelBtn.GetComponent<Image>().color = Color.green;
+    }
+    
     public void AddPatientBtn()
     {
         if (string.IsNullOrWhiteSpace(nameInputField.text) || string.IsNullOrWhiteSpace(surnameInputField.text))
@@ -305,33 +316,25 @@ public class MainMenuController : MonoBehaviour
         MuhammetDataBase.patients.Add(patient);
         Debug.Log("New Patient Added To Data Base");
         CloseAddPatientModal();
-        patientDashBoard.AddNewPatientToDashBoard(patient);
+        patientDashBoard.AddNewPatientToDashBoard(databaseHandler.patient);
         nameInputField.text = string.Empty;
         surnameInputField.text = string.Empty;
         errorText.text = string.Empty;
     }
 
 
-    public void OnPatientButtonClicked(Patient patient)
+    public void OnPatientButtonClicked(Dictionary<string, object> patientData)
     {
-        Debug.Log("Clicked on: " + patient.patientName);
+        string name = patientData.TryGetValue("name", out var _name) ? _name.ToString() : "Unknown";
+        string surname = patientData.TryGetValue("surname", out var _surname) ? _surname.ToString() : "Unknown";
         ResetGameConfigurationMenu();
-
-        currentName = patient.patientName;
-        currentSurname = patient.patientSurname;
         
-        patientNameSurnameText.text = patient.patientName;
+        databaseHandler.patient = patientData;
+        
+        patientNameSurnameText.text = name + " " + surname;
 
-        if (patient.isInGame)
-        {
-            startNewGameBtn.interactable = false;
-            endGameBtn.interactable = true;
-        }
-        else
-        {
-            startNewGameBtn.interactable = true;
-            endGameBtn.interactable = false;
-        }
+        startNewGameBtn.interactable = true;
+        endGameBtn.interactable = false;
         patientDatailModal.SetActive(true);
 
     }

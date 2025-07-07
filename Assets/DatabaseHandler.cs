@@ -10,7 +10,8 @@ public class DatabaseHandler : MonoBehaviour
     FirebaseFirestore db;
     public string currentSessionId;
     public string currentPatientId;
-
+    public  List<Dictionary<string, object>> Patients;
+    public Dictionary<string, object> patient { get; set; }
     private void Awake()
     {
         db = FirebaseFirestore.DefaultInstance;
@@ -36,15 +37,19 @@ public class DatabaseHandler : MonoBehaviour
             Debug.Log($"Hasta: {patient["name"]} {patient["surname"]}, ROM: {patient["rom"]}, ID: {patient["id"]}");
         }*/
     }
+    async public void NextLevelCall()
+    {
+        await NextLevel();
+    }
 
     async public void AddPatientCall(string patientName, string patientSurname)
     {
         await AddPatient(patientName, patientSurname);
     }
     
-    async public void AddSessionCall(string patientName, string patientSurname, int mode, int hand, int curl)
+    async public void AddSessionCall(int mode, int hand, int curl, int level)
     {
-        await AddSessionWithNameSurname(patientName, patientSurname, mode, hand, curl);
+        await AddSessionWithNameSurname(mode, hand, curl,level);
     }
     
     async public void DeactivateSessionByIdCall(string patientId, string sessionId)
@@ -52,7 +57,6 @@ public class DatabaseHandler : MonoBehaviour
         await DeactivateSessionById(patientId, sessionId);
     }
 
-    // ✅ Hasta ekleme artık `async` oldu ve sonuç bekleniyor
     async Task AddPatient(string patientName, string patientSurname)
     {
         var snapshot = await db.Collection("patients")
@@ -66,27 +70,75 @@ public class DatabaseHandler : MonoBehaviour
         }
         else
         {
+            var checkpoints = new Dictionary<string, object>
+            {
+                { "mode1", 1 },
+                { "mode2", 1 },
+                { "mode3", 1 },
+                { "mode4", 1 }
+            };
+
             var patientData = new Dictionary<string, object>
             {
                 { "name", patientName },
                 { "surname", patientSurname },
-                { "rom", 0 }
+                { "rom", 0 },
+                { "checkpoints", checkpoints }
             };
 
             await db.Collection("patients").AddAsync(patientData);
             Debug.Log("Hasta başarıyla eklendi.");
         }
     }
+
     
     
-    async Task AddSessionToPatient(string patientId, bool isActive, int mode, int hand, int curl)
+    async Task AddSessionToPatient(bool isActive, int mode, int hand, int curl, int level)
     {
+        string patientId = patient.TryGetValue("id", out var _id) ? _id.ToString() : null;
+
+        if (string.IsNullOrEmpty(patientId))
+        {
+            Debug.LogError("Hasta ID'si bulunamadı, seans eklenemedi.");
+            return;
+        }
+
+        int gameLevel = 1; // default
+
+        if (level == 0)
+        {
+            gameLevel = 1; // start from first level
+        }
+        else if (level == 1)
+        {
+            // get patient document
+            var patientDoc = await db.Collection("patients").Document(patientId).GetSnapshotAsync();
+
+            if (patientDoc.Exists && patientDoc.TryGetValue("checkpoints", out Dictionary<string, object> checkpoints))
+            {
+                string modeKey = $"mode{mode}";
+                if (checkpoints.TryGetValue(modeKey, out var checkpointLevelObj) && int.TryParse(checkpointLevelObj.ToString(), out int checkpointLevel))
+                {
+                    gameLevel = checkpointLevel;
+                }
+                else
+                {
+                    Debug.LogWarning($"Belirtilen mod için checkpoint bulunamadı, varsayılan olarak 1 kullanılacak: {modeKey}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning("Hasta dökümanı veya checkpoint verisi yok, varsayılan olarak 1 kullanılacak.");
+            }
+        }
+
         var sessionData = new Dictionary<string, object>
         {
             { "active", isActive },
             { "mode", mode },
             { "hand", hand },
-            { "curl", curl }
+            { "curl", curl },
+            { "level", gameLevel }
         };
 
         var result = await db.Collection("patients")
@@ -94,15 +146,15 @@ public class DatabaseHandler : MonoBehaviour
             .Collection("sessions")
             .AddAsync(sessionData);
 
-        Debug.Log("Seans eklendi. ID: " + result.Id);
+        Debug.Log($"Seans eklendi. ID: {result.Id}");
         currentPatientId = patientId;
         currentSessionId = result.Id;
     }
 
-    async Task AddSessionWithNameSurname(string patientName, string patientSurname, int mode, int hand, int curl)
+
+    async Task AddSessionWithNameSurname(int mode, int hand, int curl, int level)
     {
-        string id = await GetPatientIdByNameSurname(patientName, patientSurname);
-        await AddSessionToPatient(id, true, mode, hand, curl);
+        await AddSessionToPatient( true, mode, hand, curl, level);
     }
     
     // 🔍 Hasta ad ve soyadına göre ID'yi döndürür
@@ -180,6 +232,59 @@ public class DatabaseHandler : MonoBehaviour
 
         return patientList;
     }
+    
+    public async Task NextLevel()
+    {
+        if (string.IsNullOrEmpty(currentPatientId) || string.IsNullOrEmpty(currentSessionId))
+        {
+            Debug.LogError("Aktif bir hasta veya seans yok. NextLevel çalıştırılamadı.");
+            return;
+        }
+
+        var sessionRef = db.Collection("patients")
+            .Document(currentPatientId)
+            .Collection("sessions")
+            .Document(currentSessionId);
+
+        try
+        {
+            var sessionSnapshot = await sessionRef.GetSnapshotAsync();
+
+            if (sessionSnapshot.Exists)
+            {
+                int currentLevel = 1;
+
+                if (sessionSnapshot.TryGetValue("level", out int existingLevel))
+                {
+                    currentLevel = existingLevel;
+                }
+
+                int newLevel = Mathf.Min(currentLevel + 1, 5); // max level 5
+
+                await sessionRef.UpdateAsync(new Dictionary<string, object>
+                {
+                    { "level", newLevel }
+                });
+
+                Debug.Log($"Seans seviyesi güncellendi: {currentLevel} → {newLevel}");
+
+                // Optionally, you could do:
+                if (newLevel >= 5)
+                {
+                    Debug.Log("Maksimum seviye ulaşıldı. Butonu devre dışı bırakabilirsiniz.");
+                }
+            }
+            else
+            {
+                Debug.LogError("Seans bulunamadı.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("NextLevel sırasında hata oluştu: " + ex.Message);
+        }
+    }
+
 
 
 }

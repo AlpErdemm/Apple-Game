@@ -16,10 +16,10 @@ public class PatientDashBoardCreator : MonoBehaviour
         mainMenuController = GetComponent<MainMenuController>();
 
         // Veritabanından hastaları çek
-        var patients = await databaseHandler.GetAllPatients();
+        databaseHandler.Patients = await databaseHandler.GetAllPatients();
 
         // Çekilen hastaları göster
-        await LoadAllPatientsToDashBoard(patients);
+        await LoadAllPatientsToDashBoard(databaseHandler.Patients);
     }
 
     public async Task LoadAllPatientsToDashBoard(List<Dictionary<string, object>> patients)
@@ -57,25 +57,27 @@ public class PatientDashBoardCreator : MonoBehaviour
                     patientSurname = surname,
                     isInGame = isInGame
                 };
-                mainMenuController.OnPatientButtonClicked(patient);
+                mainMenuController.OnPatientButtonClicked(patientData);
             });
         }
     }
 
-    public void AddNewPatientToDashBoard(Patient patient)
+    public void AddNewPatientToDashBoard(Dictionary<string, object> _patient)
     {
         GameObject newButton = Instantiate(patientButtonPrefab, contentParent);
         TextMeshProUGUI buttonText = newButton.GetComponentInChildren<TextMeshProUGUI>();
-        buttonText.text = patient.patientName;
+        string name = _patient.TryGetValue("name", out var _name) ? _name.ToString() : "Unknown";
+        string surname = _patient.TryGetValue("name", out var _surname) ? _surname.ToString() : "Unknown";
+        buttonText.text = name + " " + surname;
 
-        Image background = newButton.GetComponent<Image>();
+        /*Image background = newButton.GetComponent<Image>();
         if (background != null)
         {
-            background.color = patient.isInGame ? Color.cyan : Color.red;
-        }
+            background.color = _patient.isInGame ? Color.cyan : Color.red;
+        }*/
         // Ekstra olarak t�klama i�levi eklenecekse:
         Button btn = newButton.GetComponent<Button>();
-        btn.onClick.AddListener(() => mainMenuController.OnPatientButtonClicked(patient));
+        btn.onClick.AddListener(() => mainMenuController.OnPatientButtonClicked(_patient));
 
         Debug.Log("New Patient Added To Dash Board");
     }
