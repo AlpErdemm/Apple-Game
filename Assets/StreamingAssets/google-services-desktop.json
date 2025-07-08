@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:386753603604:ios:ee4cbe1e87b8783ddf1f01",
+        "mobilesdk_app_id": "1:386753603604:ios:2a862caa80521e74df1f01",
         "android_client_info": {
-          "package_name": "com.Company.Apple-Game-2"
+          "package_name": "com.Company.AppleGame3"
         }
       },
       "api_key": [

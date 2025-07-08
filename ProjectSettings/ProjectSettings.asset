@@ -164,9 +164,9 @@ PlayerSettings:
   androidMaxAspectRatio: 2.4
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Android: com.Company.AppleGame2
-    Standalone: com.Trb.AppleGame
-    iPhone: com.Company.Apple-Game-2
+    Android: com.Company.AppleGame3
+    Standalone: com.Company.AppleGame3
+    iPhone: com.Company.AppleGame3
   buildNumber:
     Standalone: 0
     VisionOS: 0

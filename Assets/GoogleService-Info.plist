@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.Company.Apple-Game-2</string>
+	<string>com.Company.AppleGame3</string>
 	<key>PROJECT_ID</key>
 	<string>apple-harvest-vr</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:386753603604:ios:ee4cbe1e87b8783ddf1f01</string>
+	<string>1:386753603604:ios:2a862caa80521e74df1f01</string>
 </dict>
 </plist>

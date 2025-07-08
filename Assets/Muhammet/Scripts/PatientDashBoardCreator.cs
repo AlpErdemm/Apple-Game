@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Michsky.MUIP;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,7 +11,6 @@ public class PatientDashBoardCreator : MonoBehaviour
     public Transform contentParent; // Scroll View > Viewport > Content nesnesi
     private MainMenuController mainMenuController;
     public DatabaseHandler databaseHandler;
-    
     async void Start()
     {
         mainMenuController = GetComponent<MainMenuController>();
@@ -32,20 +32,13 @@ public class PatientDashBoardCreator : MonoBehaviour
 
             // İsim birleştir
             string fullName = $"{name} {surname}";
-
+            
             GameObject newButton = Instantiate(patientButtonPrefab, contentParent);
 
             // Buton üzerindeki yazı
             TextMeshProUGUI buttonText = newButton.GetComponentInChildren<TextMeshProUGUI>();
             buttonText.text = fullName;
-
-            // Renk Ayarı
-            Image background = newButton.GetComponent<Image>();
-            if (background != null)
-            {
-                background.color = isInGame ? Color.cyan : Color.red;
-            }
-
+            
             // Tıklama işlevi
             Button btn = newButton.GetComponent<Button>();
             btn.onClick.AddListener(() =>
