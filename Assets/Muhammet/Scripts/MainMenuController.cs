@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using Michsky.MUIP;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -9,6 +10,7 @@ using UnityEngine.UI;
 public class MainMenuController : MonoBehaviour
 {
     [Header("Canvases")]
+    [SerializeField] private GameObject startCanvas;
     [SerializeField] private GameObject mainMenuCanvas;
     [SerializeField] private GameObject addPatientModal;
     [SerializeField] private GameObject patientDatailModal;
@@ -25,7 +27,11 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private TMP_InputField applePositionX;
     [SerializeField] private TMP_InputField applePositionY;
     [SerializeField] private TMP_InputField applePositionZ;
-
+    [SerializeField] private HorizontalSelector handSelector;
+    [SerializeField] private CustomDropdown modeSelector;
+    [SerializeField] private CustomDropdown curlSelector;
+    [SerializeField] private HorizontalSelector levelSelector;
+    
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI errorText;
     [SerializeField] private TextMeshProUGUI patientNameSurnameText;
@@ -35,10 +41,6 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private Button endGameBtn;
     [SerializeField] private Button handSelectLeftBtn;
     [SerializeField] private Button handSelectRightBtn;
-    [SerializeField] private Button handCurl20;
-    [SerializeField] private Button handCurl40;
-    [SerializeField] private Button handCurl60;
-    
     [SerializeField] private Button firstLevelBtn;
     [SerializeField] private Button lastLevelBtn;
 
@@ -50,18 +52,15 @@ public class MainMenuController : MonoBehaviour
     private Vector3 basketPosition;
     private Vector3 applePosition;
 
-    private int selectedCurlValue = 60; // Default to 60
-    private bool selectedFirstLevel = true; 
-    private bool isSelectedRightHand;
+    private int selectedCurlValue = 2;
+    private int selectedLevel = 0; 
+    private int selectedHand = 0;
     private bool isCalibrationOpen;
 
     private int activeModeId;
     private PatientDashBoardCreator patientDashBoard;
     private void Start()
     {
-        handCurl20.onClick.AddListener(SelectCurl20);
-        handCurl40.onClick.AddListener(SelectCurl40);
-        handCurl60.onClick.AddListener(SelectCurl60);
         errorText.text = string.Empty;
         patientDashBoard = GetComponent<PatientDashBoardCreator>();
         DisableAllScene();
@@ -110,7 +109,18 @@ public class MainMenuController : MonoBehaviour
             image.color = Color.red;
         }
     }
-
+    public void HandChanged()
+    {
+        selectedHand = handSelector.index;
+    }
+    public void LevelChanged()
+    {
+        selectedLevel = levelSelector.index;
+    }
+    public void GameModeChanged()
+    {
+        activeModeId = modeSelector.index;
+    }
     public void GameMode1()
     {
         DisableAllModeImages();
@@ -156,6 +166,11 @@ public class MainMenuController : MonoBehaviour
         gameConfigurationFirstModal.SetActive(false);
         gameConfigurationSecondModal.SetActive(false);
     }
+    public void OpenPatientList()
+    {
+        startCanvas.SetActive(false);
+        mainMenuCanvas.SetActive(true);
+    }
 
     public void OpenAddPatientModalBtn()
     {
@@ -167,6 +182,7 @@ public class MainMenuController : MonoBehaviour
     }
     public void OpenPatientDetailsModal()
     {
+        mainMenuCanvas.SetActive(false);
         patientDatailModal.SetActive(true);
         gameConfigurationFirstModal.SetActive(false);
     }
@@ -182,6 +198,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OpenGameConfigurationFirstModal()
     {
+        patientDatailModal.SetActive(false);
         gameConfigurationFirstModal.SetActive(true);
         gameConfigurationSecondModal.SetActive(false);
     }
@@ -198,8 +215,8 @@ public class MainMenuController : MonoBehaviour
 
     private void ResetGameConfigurationMenu()
     {
-        isSelectedRightHand = false;
-        selectedCurlValue = 60;
+        selectedHand = 0;
+        selectedCurlValue = 2;
         isCalibrationOpen = false;
         basketPositionX.text = "0";
         basketPositionY.text = "0";
@@ -211,16 +228,11 @@ public class MainMenuController : MonoBehaviour
         handSelectLeftBtn.GetComponent<Image>().color = Color.green;
         handSelectRightBtn.GetComponent<Image>().color = Color.red;
         
-                
-        handCurl20.GetComponent<Image>().color = Color.red;
-        handCurl40.GetComponent<Image>().color = Color.red;
-        handCurl60.GetComponent<Image>().color = Color.green;
     }
     
     public void StartGameBtn()
     {
         gameConfigurationSecondModal.SetActive(false);
-        gameInProgressModal.SetActive(true);
         if (activeModeId == 1)
         {
             applePosition = new Vector3(float.Parse(applePositionX.text), float.Parse(applePositionY.text), float.Parse(applePositionZ.text));
@@ -228,7 +240,7 @@ public class MainMenuController : MonoBehaviour
             
             Debug.Log($"Game Starting !!\n" +
                 $"Calibration = {isCalibrationOpen}\n" +
-                $"SelectedRightHand = {isSelectedRightHand}\n" +
+                $"SelectedRightHand = {selectedHand}\n" +
                 $"GameModeId = {activeModeId}\n" +
                 $"Basket Position = {basketPosition}\n" +
                 $"Apple Position{applePosition}");
@@ -237,13 +249,11 @@ public class MainMenuController : MonoBehaviour
         {
             Debug.Log($"Game Starting !!\n" +
                 $"Calibration = {isCalibrationOpen}\n" +
-                $"SelectedRightHand = {isSelectedRightHand}\n" +
+                $"SelectedRightHand = {selectedHand}\n" +
                 $"GameModeId = {activeModeId}");
         }
         
-        databaseHandler.AddSessionCall(activeModeId, isSelectedRightHand?0:1, selectedCurlValue, selectedFirstLevel?0:1);
-
-
+        databaseHandler.AddSessionCall(activeModeId, selectedHand, selectedCurlValue, selectedLevel);
     }
     public void ContinueBtn()
     {
@@ -253,50 +263,30 @@ public class MainMenuController : MonoBehaviour
 
     public void SelectRightHand()
     {
-        isSelectedRightHand = true;
+        selectedHand = 0;
         handSelectLeftBtn.GetComponent<Image>().color = Color.red;
         handSelectRightBtn.GetComponent<Image>().color = Color.green;
     }
     public void SelectLeftHand()
     {
-        isSelectedRightHand = false;
+        selectedHand = 1;
         handSelectLeftBtn.GetComponent<Image>().color = Color.green;
         handSelectRightBtn.GetComponent<Image>().color = Color.red;
     }
-    public void SelectCurl20()
+    public void HandCurlChanged()
     {
-        selectedCurlValue = 20;
-        handCurl20.GetComponent<Image>().color = Color.green;
-        handCurl40.GetComponent<Image>().color = Color.red;
-        handCurl60.GetComponent<Image>().color = Color.red;
+        selectedCurlValue = curlSelector.index;
     }
-    
-    public void SelectCurl40()
-    {
-        selectedCurlValue = 40;
-        handCurl20.GetComponent<Image>().color = Color.red;
-        handCurl40.GetComponent<Image>().color = Color.green;
-        handCurl60.GetComponent<Image>().color = Color.red;
-    }
-    
-    public void SelectCurl60()
-    {
-        selectedCurlValue = 60;
-        handCurl20.GetComponent<Image>().color = Color.red;
-        handCurl40.GetComponent<Image>().color = Color.red;
-        handCurl60.GetComponent<Image>().color = Color.green;
-    }
-    
     public void SelectFirstLevel()
     {
-        selectedFirstLevel = true;
+        selectedLevel = 0;
         firstLevelBtn.GetComponent<Image>().color = Color.green;
         lastLevelBtn.GetComponent<Image>().color = Color.red;
     }
     
     public void SelectLastLevel()
     {
-        selectedFirstLevel = false;
+        selectedLevel = 1;
         firstLevelBtn.GetComponent<Image>().color = Color.red;
         lastLevelBtn.GetComponent<Image>().color = Color.green;
     }
@@ -336,12 +326,13 @@ public class MainMenuController : MonoBehaviour
         startNewGameBtn.interactable = true;
         endGameBtn.interactable = false;
         patientDatailModal.SetActive(true);
+        mainMenuCanvas.SetActive(false);
 
     }
     public void OnEndGameButtonClicked()
     {
         databaseHandler.DeactivateSessionByIdCall(databaseHandler.currentPatientId, databaseHandler.currentSessionId);
+        gameConfigurationFirstModal.SetActive(false);
         patientDatailModal.SetActive(true);
-        gameInProgressModal.SetActive(false);
     }
 }

@@ -14,7 +14,10 @@ public class PatientDashBoardCreator : MonoBehaviour
     async void Start()
     {
         mainMenuController = GetComponent<MainMenuController>();
-
+    }
+    
+    public async void LoadAllPatientsToDashBoard()
+    {
         // Veritabanından hastaları çek
         databaseHandler.Patients = await databaseHandler.GetAllPatients();
 
