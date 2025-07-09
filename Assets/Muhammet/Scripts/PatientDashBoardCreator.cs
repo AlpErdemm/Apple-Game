@@ -25,6 +25,15 @@ public class PatientDashBoardCreator : MonoBehaviour
         await LoadAllPatientsToDashBoard(databaseHandler.Patients);
     }
 
+    public void RemoveAllButtons()
+    {
+        // Destroy all existing buttons in the content parent
+        foreach (Transform child in contentParent)
+        {
+            Destroy(child.gameObject);
+        }
+    }
+
     public async Task LoadAllPatientsToDashBoard(List<Dictionary<string, object>> patients)
     {
         foreach (var patientData in patients)

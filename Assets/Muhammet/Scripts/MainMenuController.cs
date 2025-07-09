@@ -35,6 +35,7 @@ public class MainMenuController : MonoBehaviour
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI errorText;
     [SerializeField] private TextMeshProUGUI patientNameSurnameText;
+    [SerializeField] private TextMeshProUGUI headerText;
 
     [Header("Buttons")]
     [SerializeField] private Button startNewGameBtn;
@@ -64,7 +65,7 @@ public class MainMenuController : MonoBehaviour
         errorText.text = string.Empty;
         patientDashBoard = GetComponent<PatientDashBoardCreator>();
         DisableAllScene();
-        mainMenuCanvas.SetActive(true);
+        //mainMenuCanvas.SetActive(true);
         GameMode1();
     }
     
@@ -172,6 +173,22 @@ public class MainMenuController : MonoBehaviour
         mainMenuCanvas.SetActive(true);
     }
 
+    public void BackToStartCanvas()
+    {
+        startCanvas.SetActive(true);
+        mainMenuCanvas.SetActive(false);
+    }
+    
+    public void BackToPatientList()
+    {
+        mainMenuCanvas.SetActive(true);
+        patientDatailModal.SetActive(false);
+    }
+    public void BackToPatientDetails()
+    {
+        patientDatailModal.SetActive(true);
+        gameConfigurationFirstModal.SetActive(false);
+    }
     public void OpenAddPatientModalBtn()
     {
         addPatientModal.SetActive(true);
@@ -322,7 +339,7 @@ public class MainMenuController : MonoBehaviour
         databaseHandler.patient = patientData;
         
         patientNameSurnameText.text = name + " " + surname;
-
+        headerText.text = name + " " + surname;
         startNewGameBtn.interactable = true;
         endGameBtn.interactable = false;
         patientDatailModal.SetActive(true);
