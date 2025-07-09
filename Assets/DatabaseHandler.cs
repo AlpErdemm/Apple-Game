@@ -47,9 +47,9 @@ public class DatabaseHandler : MonoBehaviour
         await AddPatient(patientName, patientSurname);
     }
     
-    async public void AddSessionCall(int mode, int hand, int curl, int level)
+    async public void AddSessionCall(int mode, int hand, int curl, int level, int gamification)
     {
-        await AddSessionWithNameSurname(mode, hand, curl,level);
+        await AddSessionWithNameSurname(mode, hand, curl,level,gamification);
     }
     
     async public void DeactivateSessionByIdCall(string patientId, string sessionId)
@@ -93,7 +93,7 @@ public class DatabaseHandler : MonoBehaviour
 
     
     
-    async Task AddSessionToPatient(bool isActive, int mode, int hand, int curl, int level)
+    async Task AddSessionToPatient(bool isActive, int mode, int hand, int curl, int level, int gamification)
     {
         string patientId = patient.TryGetValue("id", out var _id) ? _id.ToString() : null;
 
@@ -103,15 +103,14 @@ public class DatabaseHandler : MonoBehaviour
             return;
         }
 
-        int gameLevel = 1; // default
+        int gameLevel = 1;
 
         if (level == 0)
         {
-            gameLevel = 1; // start from first level
+            gameLevel = 1; // Başlangıç seviyesi
         }
         else if (level == 1)
         {
-            // get patient document
             var patientDoc = await db.Collection("patients").Document(patientId).GetSnapshotAsync();
 
             if (patientDoc.Exists && patientDoc.TryGetValue("checkpoints", out Dictionary<string, object> checkpoints))
@@ -121,14 +120,6 @@ public class DatabaseHandler : MonoBehaviour
                 {
                     gameLevel = checkpointLevel;
                 }
-                else
-                {
-                    Debug.LogWarning($"Belirtilen mod için checkpoint bulunamadı, varsayılan olarak 1 kullanılacak: {modeKey}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning("Hasta dökümanı veya checkpoint verisi yok, varsayılan olarak 1 kullanılacak.");
             }
         }
 
@@ -138,7 +129,8 @@ public class DatabaseHandler : MonoBehaviour
             { "mode", mode },
             { "hand", hand },
             { "curl", curl },
-            { "level", gameLevel }
+            { "level", gameLevel },
+            { "gamification", gamification }
         };
 
         var result = await db.Collection("patients")
@@ -152,9 +144,9 @@ public class DatabaseHandler : MonoBehaviour
     }
 
 
-    async Task AddSessionWithNameSurname(int mode, int hand, int curl, int level)
+    async Task AddSessionWithNameSurname(int mode, int hand, int curl, int level, int gamification)
     {
-        await AddSessionToPatient( true, mode, hand, curl, level);
+        await AddSessionToPatient( true, mode, hand, curl, level, gamification);
     }
     
     // 🔍 Hasta ad ve soyadına göre ID'yi döndürür

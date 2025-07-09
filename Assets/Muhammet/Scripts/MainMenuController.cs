@@ -31,6 +31,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private CustomDropdown modeSelector;
     [SerializeField] private CustomDropdown curlSelector;
     [SerializeField] private HorizontalSelector levelSelector;
+    [SerializeField] private HorizontalSelector gamificationSelector;
     
     [Header("Texts")]
     [SerializeField] private TextMeshProUGUI errorText;
@@ -56,6 +57,7 @@ public class MainMenuController : MonoBehaviour
     private int selectedCurlValue = 2;
     private int selectedLevel = 0; 
     private int selectedHand = 0;
+    private int gamification = 0;
     private bool isCalibrationOpen;
 
     private int activeModeId;
@@ -109,6 +111,10 @@ public class MainMenuController : MonoBehaviour
         {
             image.color = Color.red;
         }
+    }
+    public void GamificationChanged()
+    {
+        gamification = gamificationSelector.index;
     }
     public void HandChanged()
     {
@@ -232,6 +238,7 @@ public class MainMenuController : MonoBehaviour
 
     private void ResetGameConfigurationMenu()
     {
+        gamification = 0;
         selectedHand = 0;
         selectedCurlValue = 2;
         isCalibrationOpen = false;
@@ -270,7 +277,7 @@ public class MainMenuController : MonoBehaviour
                 $"GameModeId = {activeModeId}");
         }
         
-        databaseHandler.AddSessionCall(activeModeId, selectedHand, selectedCurlValue, selectedLevel);
+        databaseHandler.AddSessionCall(activeModeId, selectedHand, selectedCurlValue, selectedLevel, gamification);
     }
     public void ContinueBtn()
     {
