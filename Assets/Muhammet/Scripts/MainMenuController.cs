@@ -330,7 +330,7 @@ public class MainMenuController : MonoBehaviour
         MuhammetDataBase.patients.Add(patient);
         Debug.Log("New Patient Added To Data Base");
         CloseAddPatientModal();
-        patientDashBoard.AddNewPatientToDashBoard(databaseHandler.patient);
+        patientDashBoard.AddNewPatientToDashBoard(databaseHandler.patient, nameInputField.text, surnameInputField.text);
         nameInputField.text = string.Empty;
         surnameInputField.text = string.Empty;
         errorText.text = string.Empty;
@@ -356,6 +356,7 @@ public class MainMenuController : MonoBehaviour
     public void OnEndGameButtonClicked()
     {
         databaseHandler.DeactivateSessionByIdCall(databaseHandler.currentPatientId, databaseHandler.currentSessionId);
+        gameInProgressModal.SetActive(false);
         gameConfigurationFirstModal.SetActive(false);
         patientDatailModal.SetActive(true);
     }

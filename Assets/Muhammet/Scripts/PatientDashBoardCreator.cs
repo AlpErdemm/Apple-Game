@@ -67,13 +67,11 @@ public class PatientDashBoardCreator : MonoBehaviour
         }
     }
 
-    public void AddNewPatientToDashBoard(Dictionary<string, object> _patient)
+    public void AddNewPatientToDashBoard(Dictionary<string, object> _patient, string _name, string _surname)
     {
         GameObject newButton = Instantiate(patientButtonPrefab, contentParent);
         TextMeshProUGUI buttonText = newButton.GetComponentInChildren<TextMeshProUGUI>();
-        string name = _patient.TryGetValue("name", out var _name) ? _name.ToString() : "Unknown";
-        string surname = _patient.TryGetValue("name", out var _surname) ? _surname.ToString() : "Unknown";
-        buttonText.text = name + " " + surname;
+        buttonText.text = _name + " " + _surname;
 
         /*Image background = newButton.GetComponent<Image>();
         if (background != null)
