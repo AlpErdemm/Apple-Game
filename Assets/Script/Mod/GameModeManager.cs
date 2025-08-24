@@ -2,7 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 
-public enum GameMode { Measurement, WrongBasket, DropOnly, Unreachable, Static, None }
+public enum GameMode { Measurement, WrongBasket, DropOnly, Unreachable, Static, PerceptionEvaluation, None }
 
 public class GameModeManager : MonoBehaviour
 {
@@ -132,6 +132,46 @@ public class GameModeManager : MonoBehaviour
     {
         CurrentMode = GameMode.Static;
         spawner.SpawnCustomApples(manualGrids);  // bu helper’ı spawner’a az sonra ekleyeceğiz
+    }
+    public void StartPerceptionEvaluation()
+    {
+        gameModeUI.SetActive(false);
+        CurrentMode = GameMode.PerceptionEvaluation;
+        spawner.RealignToHeadset();
+
+        Debug.Log("Starting Perception Evaluation Mode...");
+
+        /* 1️⃣ Tüm başarılı sonuçları al - bu elmalar doğru tanınmış olmalı */
+        var successGrids = data.Filter(AppleOutcome.Success);
+        Debug.Log($"Found {successGrids.Count} successful apples for perception evaluation");
+        
+        /* 2️⃣ Yanlış sepete konan elmaları al - bu elmalar yanlış tanınmış */
+        var wrongBasketGrids = data.Filter(AppleOutcome.WrongBasket);
+        Debug.Log($"Found {wrongBasketGrids.Count} wrong basket apples for perception evaluation");
+        
+        /* 3️⃣ Her iki listeyi birleştir - algı değerlendirmesi için tüm elmaları kullan */
+        var allPerceptionGrids = successGrids.Concat(wrongBasketGrids)
+            .Distinct()
+            .ToList();
+
+        Debug.Log($"Total perception evaluation apples: {allPerceptionGrids.Count}");
+
+        /* 4️⃣ Hiç elma yoksa modu bitmiş say ve UI'yi aç */
+        if (allPerceptionGrids.Count == 0)
+        {
+            Debug.Log("Algı değerlendirmesi için yeterli veri yok.");
+            FinishCurrentMode();
+            return;
+        }
+
+        /* 5️⃣ Sayaç ayarla ve global elma-olayına abone ol */
+        remainingApples = allPerceptionGrids.Count;
+        Apple.OnAnyApplePicked += HandleApplePicked;
+
+        Debug.Log($"Spawning {allPerceptionGrids.Count} apples for perception evaluation");
+
+        /* 6️⃣ Elmaların spawn'u - karışık sağlıklı ve çürük elmalar */
+        spawner.SpawnCustomApples(allPerceptionGrids.ToArray());
     }
 
     // ——  HELPERS  ————————————————————————————————————

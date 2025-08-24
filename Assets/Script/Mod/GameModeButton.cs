@@ -28,6 +28,9 @@ public class GameModeButton : MonoBehaviour
                 case GameMode.Static:
                     GameModeManager.Instance.StartStatic();
                     break;
+                case GameMode.PerceptionEvaluation:
+                    GameModeManager.Instance.StartPerceptionEvaluation();
+                    break;
                 case GameMode.None:
                     GameModeManager.Instance.EndModeByButton();
                     GameModeManager.Instance.gameModeUI.SetActive(true);
